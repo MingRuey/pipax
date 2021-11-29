@@ -2,6 +2,7 @@
 Baseline benchmark with MNIST and simple MLP
 
 It runs on single device, without any model/pipeline parallelism
+We select a computing-bound setup (a MLP with memory size around 40MB)
 """
 import os
 import sys
@@ -44,7 +45,7 @@ class TestBenchmarkOnSingleDevice:
     def test_simple_mlp_with_adam(self):
         epoch = 10
         batch = 4096
-        weights, apply = mlp(input_shape=(28 * 28,), nodes_per_layer=[1024] * 8 + [10])
+        weights, apply = mlp(input_shape=(28 * 28,), nodes_per_layer=[1024] * 16 + [10])
         optimizer = optax.adam(learning_rate=0.001)
         opt_state = optimizer.init(weights)
 
@@ -56,7 +57,6 @@ class TestBenchmarkOnSingleDevice:
             return weights, opt_state, loss
 
         imgs, labels = MNIST.get_all_train()
-        imgs, labels = imgs.reshape(imgs.shape[0], -1), labels.reshape(labels.shape[0], -1)
         imgs_test, labels_test = MNIST.get_all_test()
         imgs_test, labels_test = imgs_test.reshape(imgs_test.shape[0], -1), labels_test.reshape(labels_test.shape[0], -1)
 
@@ -71,7 +71,6 @@ class TestBenchmarkOnSingleDevice:
                 y = jax.device_put(y, device=jax.devices("gpu")[0])
                 start = time.time()
                 weights, opt_state, loss = single_iteration(x, y, weights, opt_state)
-                loss.block_until_ready()
                 elapsed += time.time() - start
 
             logit = apply(weights, imgs_test)
@@ -81,4 +80,4 @@ class TestBenchmarkOnSingleDevice:
 
 
 if __name__ == "__main__":
-    pytest.main(["-s", "-v", __file__])
+    pytest.main(["-s", "-v", __file__, "--durations=0"])

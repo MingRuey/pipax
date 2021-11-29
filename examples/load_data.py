@@ -33,13 +33,17 @@ def extract_label(file: str):
 class MNIST:
 
     @staticmethod
-    def get_all_train():
+    def get_all_train(flatten: bool=True):
         imgs, labels = extract_image("train-images.idx3-ubyte"), extract_label("train-labels.idx1-ubyte")
         imgs = imgs / 256
+        if flatten:
+            imgs, labels = imgs.reshape(imgs.shape[0], -1), labels.reshape(labels.shape[0], -1)
         return imgs, labels
 
     @staticmethod
-    def get_all_test():
+    def get_all_test(flatten: bool=True):
         imgs, labels = extract_image("t10k-images.idx3-ubyte"), extract_label("t10k-labels.idx1-ubyte")
         imgs = imgs / 256
+        if flatten:
+            imgs, labels = imgs.reshape(imgs.shape[0], -1), labels.reshape(labels.shape[0], -1)
         return imgs, labels
