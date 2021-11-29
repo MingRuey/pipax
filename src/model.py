@@ -16,4 +16,5 @@ def mlp(input_shape: Tuple[int], nodes_per_layer: List[int], activation=stax.Tan
     layers.append(stax.Dense(nodes_per_layer[-1], W_init=xavier_normal(), b_init=normal()))
     init, apply = stax.serial(*layers)
     out_shape, weights = init(STATIC_KEY, input_shape)
+    apply = jax.vmap(apply, (None, 0))
     return weights, apply
