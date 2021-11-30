@@ -12,10 +12,11 @@ def async_host(device: Device,
                 weights: ConcreteArray,
                 apply_fn: Callable,
                 optimizer) -> Tuple[ConcreteArray, Any, Callable, Callable]:
-    """A host on device whose weights NOT synchonizing with other devices
+    """A host on device whose weights NOT synchronizing with other devices
 
-    This host is suitable for standard model parallelism.
-    Each host connects with others in a sequential way.
+    This host is suitable for standard model parallelism:
+        the model is divided into sequential stages, and each stage running
+        its forward/backward without synchronization with other stages.
     """
 
     weights = jax.device_put(weights, device=device)
