@@ -13,6 +13,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 import jax
 import jax.numpy as jnp
+from jax.example_libraries.stax import Relu
 import numpy as np
 import optax
 import pytest
@@ -45,7 +46,7 @@ class TestBenchmarkOnSingleDevice:
     def test_simple_mlp_with_adam(self):
         epoch = 10
         batch = 4096
-        weights, apply = mlp(input_shape=(28 * 28,), nodes_per_layer=[1024] * 16 + [10])
+        weights, apply = mlp(input_shape=(28 * 28,), nodes_per_layer=[1024] * 16 + [10], activation=Relu)
         optimizer = optax.adam(learning_rate=0.001)
         opt_state = optimizer.init(weights)
 
