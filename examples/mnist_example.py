@@ -4,12 +4,9 @@ Baseline benchmark with MNIST and simple MLP
 It runs on single device, without any model/pipeline parallelism
 We select a computing-bound setup (a MLP with memory size around 40MB)
 """
-import os
 import sys
 import time
 from pathlib import Path
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 import jax
 import jax.numpy as jnp
@@ -65,16 +62,15 @@ class TestBenchmarkOnSingleDevice:
         print("\n")
         for e in range(epoch):
             imgs, labels = random_shuffle(imgs, labels)
-            elapsed = 0.0
+            imgs = jax.device_put(imgs, device=jax.devices("gpu")[0])
+            labels = jax.device_put(labels, device=jax.devices("gpu")[0])
             avg_loss = 0.0
+            start = time.time()
             for b in range(batch_per_epoch):
                 x, y = imgs[b * batch: (b + 1) * batch, ...], labels[b * batch: (b + 1) * batch, ...]
-                x = jax.device_put(x, device=jax.devices("gpu")[0])
-                y = jax.device_put(y, device=jax.devices("gpu")[0])
-                start = time.time()
                 weights, opt_state, loss = single_iteration(x, y, weights, opt_state)
                 avg_loss += loss
-                elapsed += time.time() - start
+            elapsed = time.time() - start
 
             logit = apply(weights, imgs_test)
             acc = accuracy(logit, labels_test)

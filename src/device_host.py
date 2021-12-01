@@ -1,7 +1,16 @@
+"""
+A device host is a set of actions and states that resides on single GPU.
+The states include:
+    - the optimizer state
+    - the weights of layers/stages on this particular device
+The actions include:
+    - function for forward pass
+    - function for backward gradient calculation
+    - function for update the weights
+"""
 from typing import Callable, Tuple, Any
 
 import jax
-from jax._src.tree_util import tree_reduce, tree_map
 from jax.core import ConcreteArray
 from jax.tree_util import tree_multimap
 from jaxlib.xla_client import Device
@@ -27,7 +36,7 @@ def async_host(device: Device,
                 weights: ConcreteArray) -> Tuple[ConcreteArray, Callable]:
         outputs, f_vjp = jax.vjp(apply_fn, weights, forward_inputs)
         return outputs, f_vjp
-    forward = jax.jit(forward, device=device)
+    forward = jax.jit(forward, device=device, inline=True)
 
     def backward(backward_inputs: ConcreteArray,
                  f_vjp: Callable) -> Tuple[ConcreteArray, ConcreteArray, Any]:
@@ -35,13 +44,13 @@ def async_host(device: Device,
         # chain the gradients from previous layer to the current
         grads_wrt_weights, grads_wrt_foward_inputs = f_vjp(backward_inputs)
         return grads_wrt_foward_inputs, grads_wrt_weights
-    backward = jax.jit(backward, device=device)
+    backward = jax.jit(backward, device=device, inline=True)
 
     def update(grads_collection, weights, optimizer_state):
         grads = tree_multimap(lambda x, y: x + y, *grads_collection)
         updates, optimizer_state = optimizer.update(grads, optimizer_state)
         weights = optax.apply_updates(updates, weights)
         return weights, optimizer_state
-    update = jax.jit(update, device=device)
+    update = jax.jit(update, device=device, inline=True)
 
     return weights, optimizer_state, forward, backward, update
