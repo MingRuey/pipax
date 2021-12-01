@@ -44,7 +44,7 @@ class TestBenchmarkOnSingleDevice:
     """A simple example for training MLP on MNIST (without model/pipeline parallelism)"""
 
     def test_simple_mlp_with_adam(self):
-        epoch = 10
+        epoch = 50
         batch = 4096
         weights, apply = mlp(input_shape=(28 * 28,), nodes_per_layer=[1024] * 16 + [10], activation=Relu)
         optimizer = optax.adam(learning_rate=0.001)
@@ -66,18 +66,21 @@ class TestBenchmarkOnSingleDevice:
         for e in range(epoch):
             imgs, labels = random_shuffle(imgs, labels)
             elapsed = 0.0
+            avg_loss = 0.0
             for b in range(batch_per_epoch):
                 x, y = imgs[b * batch: (b + 1) * batch, ...], labels[b * batch: (b + 1) * batch, ...]
                 x = jax.device_put(x, device=jax.devices("gpu")[0])
                 y = jax.device_put(y, device=jax.devices("gpu")[0])
                 start = time.time()
                 weights, opt_state, loss = single_iteration(x, y, weights, opt_state)
+                avg_loss += loss
                 elapsed += time.time() - start
 
             logit = apply(weights, imgs_test)
             acc = accuracy(logit, labels_test)
+            avg_loss /= batch_per_epoch
             test_loss = loss_fn(logit, labels_test)
-            print(f"Epoch {e} ({batch_per_epoch * batch} images/{elapsed:.4f} sec): Test loss {test_loss}, Acc On Test: {acc}")
+            print(f"Epoch {e} ({batch_per_epoch * batch} images/{elapsed:.4f} sec): Train loss {avg_loss:.4f}, Test loss {test_loss:.4f}, Acc On Test: {acc:.3f}")
 
 
 if __name__ == "__main__":
